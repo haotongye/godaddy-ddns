@@ -35,18 +35,13 @@
 #
 # Then just invoke `godaddy-ddns %godaddy-ddns.config`
 
-prog='godaddy-ddns'
-version='0.4'
-author='Carl Edman (CarlEdman@gmail.com)'
 
-import sys, json, argparse, socket
+import argparse
+import json
+import socket
+from urllib.request import urlopen, Request
+from urllib.error import URLError, HTTPError
 
-if sys.version_info > (3,):
-  from urllib.request import urlopen, Request
-  from urllib.error import URLError, HTTPError
-else:
-  from urllib2 import urlopen, Request
-  from urllib2 import URLError, HTTPError
 
 parser = argparse.ArgumentParser(description='Update GoDaddy DNS "A" Record.', fromfile_prefix_chars='%', epilog= \
 '''GoDaddy customers can obtain values for the KEY and SECRET arguments by creating a production key at
@@ -55,9 +50,6 @@ https://developer.godaddy.com/keys/.
 Note that command line arguments may be specified in a FILE, one to a line, by instead giving
 the argument "%FILE".  For security reasons, it is particularly recommended to supply the
 KEY and SECRET arguments in such a file, rather than directly on the command line.''')
-
-parser.add_argument('--version', action='version',
-  version='{} {}'.format(prog, version))
 
 parser.add_argument('hostname', type=str,
   help='DNS fully-qualified host name with an A record.  If the hostname consists of only a domain name (i.e., it contains only one period), the record for @ is updated.')
@@ -90,7 +82,7 @@ def main():
   if not args.ip:
     try:
       with urlopen("https://ipv4.icanhazip.com/") as f: resp=f.read()
-      if sys.version_info > (3,): resp = resp.decode('utf-8')
+      resp = resp.decode('utf-8')
       args.ip = resp.strip()
     except URLError:
       msg = 'Unable to automatically obtain IP address from http://ipv4.icanhazip.com/.'
@@ -116,7 +108,7 @@ def main():
              
   url = 'https://api.godaddy.com/v1/domains/{}/records/A/{}'.format('.'.join(hostnames[1:]),hostnames[0])
   data = json.dumps([ { "data": ip, "ttl": args.ttl, "name": hostnames[0], "type": "A" } for ip in  ipslist])
-  if sys.version_info > (3,):  data = data.encode('utf-8')
+  data = data.encode('utf-8')
   req = Request(url, method='PUT', data=data)
 
   req.add_header("Content-Type","application/json")
@@ -126,7 +118,7 @@ def main():
 
   try:
     with urlopen(req) as f: resp = f.read()
-    if sys.version_info > (3,):  resp = resp.decode('utf-8')
+    resp = resp.decode('utf-8')
     # resp = json.loads(resp)
   except HTTPError as e:
     if e.code==400:
